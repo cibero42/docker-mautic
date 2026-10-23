@@ -60,6 +60,21 @@ jobs:
           mautic_version: 7.2.1
           image_type: ${{ matrix.image_type }}
 
+      - name: Start test image with demo data
+        if: matrix.image_type == 'apache'
+        run: |
+          docker tag mautic-apache mautic/mautic:latest
+          DOCKER_MAUTIC_LOAD_TEST_DATA=true docker compose --project-name mautic-test -f examples/basic/docker-compose.yml up --detach --wait
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://localhost:8080/login)
+          if [ "$status" != "200" ]; then
+            echo "Expected /login to return HTTP 200, got $status"
+            exit 1
+          fi
+
+      - name: Remove test environment
+        if: always() && matrix.image_type == 'apache'
+        run: docker compose --project-name mautic-test -f examples/basic/docker-compose.yml down --volumes --remove-orphans
+
   ###
   # Security Image
   ###
