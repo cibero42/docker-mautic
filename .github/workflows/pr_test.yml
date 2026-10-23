@@ -13,6 +13,7 @@ on:
     paths:
       - 'Dockerfile'
       - 'common/**'
+      - 'tests/**'
       - '.github/actions/**'
       - '.github/workflows/**'
 
@@ -78,19 +79,17 @@ jobs:
           docker load --input image/image.tar
           docker tag mautic-apache mautic/mautic:latest
 
-      - name: Download Docker Hub Images
-        run: docker compose --project-name mautic-test -f examples/basic/docker-compose.yml pull
+      - name: Download extra Docker Images
+        run: |
+          docker compose --project-name mautic-test -f examples/basic/docker-compose.yml pull
+          docker pull ghcr.io/orange-opensource/hurl:latest
 
       - name: Start test image with demo data
         run: DOCKER_MAUTIC_LOAD_TEST_DATA=true docker compose --project-name mautic-test -f examples/basic/docker-compose.yml up --detach --wait
 
-      - name: Check login endpoint
-        run: |
-          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://localhost:8080/login)
-          if [ "$status" != "200" ]; then
-            echo "Expected /login to return HTTP 200, got $status"
-            exit 1
-          fi
+      - name: Test login endpoint with Hurl
+        run: docker run --rm --network mautic-test-docker -v "$PWD/tests:/tests:ro" ghcr.io/orange-opensource/hurl:latest --test /tests/login.hurl
+
       - name: Show logs
         if: always()
         run: docker compose --project-name mautic-test -f examples/basic/docker-compose.yml logs
