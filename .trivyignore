@@ -25,3 +25,4 @@ CVE-2026-102828
 # Added due to temporary ignore for CKEditor transitive simple-git vulnerability
 # Issue: simple-git unsafe-operation guard does not block trailer command configuration
 CVE-2026-102828
+CVE-2026-102829
