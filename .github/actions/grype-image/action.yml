@@ -1,0 +1,34 @@
+name: Scan Docker image with Grype
+description: Download a built Docker image and scan it with Grype
+
+inputs:
+  image_type:
+    description: Image flavour to scan
+    required: true
+  fail_build:
+    description: Whether vulnerabilities at the cutoff should fail the action
+    required: true
+  severity_cutoff:
+    description: Minimum vulnerability severity to report as a failure
+    required: false
+    default: critical
+
+runs:
+  using: composite
+  steps:
+    - name: Download Docker image artifact
+      uses: actions/download-artifact@v8
+      with:
+        name: mautic-${{ inputs.image_type }}
+
+    - name: Load Docker image
+      shell: bash
+      run: docker load -i image.tar
+
+    - name: Scan Docker image
+      uses: anchore/scan-action@v7
+      with:
+        image: mautic-${{ inputs.image_type }}
+        fail-build: ${{ inputs.fail_build }}
+        severity-cutoff: ${{ inputs.severity_cutoff }}
+        output-format: table

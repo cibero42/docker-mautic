@@ -1,4 +1,4 @@
-name: Scan Docker image
+name: Scan Docker image with Trivy
 description: Download a built Mautic image and scan it with Trivy
 
 inputs:
