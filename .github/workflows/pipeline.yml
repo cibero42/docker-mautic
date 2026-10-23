@@ -97,7 +97,7 @@ jobs:
 
   test-build:
     runs-on: ubuntu-latest
-    needs: [compute-base-tag, handolint, trivy-fs]
+    needs: [compute-base-tag, hadolint, trivy-fs]
     strategy:
       matrix:
         image_type: [apache, fpm]
@@ -132,7 +132,7 @@ jobs:
   publish-build:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    needs: [compute-base-tag, handolint, trivy-fs]
+    needs: [compute-base-tag, hadolint, trivy-fs]
     strategy:
       matrix:
         image_type: [apache, fpm]
