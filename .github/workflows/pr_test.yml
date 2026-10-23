@@ -89,7 +89,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Scan Docker image
-        uses: ./.github/actions/trivyscan-image-image
+        uses: ./.github/actions/trivy-image
         with:
           image_type: ${{ matrix.image_type }}
           format: table
