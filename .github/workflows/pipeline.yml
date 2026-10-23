@@ -190,7 +190,7 @@ jobs:
         run: sleep 30
 
       - name: Test login endpoint with Hurl
-        run: docker run --rm --network mautic-test-docker -v "$PWD/tests:/tests:ro" ghcr.io/orange-opensource/hurl:latest --test -i /tests/login.hurl
+        run: docker run --rm --network mautic-test-docker -v "$PWD/tests:/tests:ro" ghcr.io/orange-opensource/hurl:latest --test -v /tests/login.hurl
 
       - name: Show logs
         if: always()
