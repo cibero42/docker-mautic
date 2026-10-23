@@ -22,14 +22,69 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  test-build:
-    uses: ./.github/workflows/build-image.yml
-    with:
-      mautic_version: ${{ inputs.mautic_version }}
+  ###
+  # Security FS
+  ###
+  hadolint:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
 
-  sast:
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.5.0
+  
+  trivy-fs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Run Trivy vulnerability scanner in fs mode
+        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: sarif
+          exit_code: '0'
+          ignore_unfixed: 'true'
+          output: 'trivy-results-${{ matrix.image_type }}.sarif'
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-${{ matrix.image_type }}.sarif'
+  
+  ###
+  # Testing
+  ###
+  test-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image_type: [apache, fpm]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build image for scanning
+        uses: ./.github/actions/build-image
+        with:
+          mautic_version: ${{ inputs.mautic_version }}
+          image_type: ${{ matrix.image_type }}
+
+  ###
+  # Security Image
+  ###
+  trivy-image:
     runs-on: ubuntu-latest
     needs: test-build
     strategy:
@@ -43,21 +98,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v8
+      - name: Scan Docker image
+        uses: ./.github/actions/scan-image
         with:
-          name: mautic-${{ matrix.image_type }}
-
-      - name: Load Docker image
-        run: docker load -i image.tar
-
-      - name: Run Trivy
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
-        with:
-          image-ref: 'mautic-${{ matrix.image_type }}'
-          format: 'sarif'
-          exit-code: '0' # Won't fail on vulns found
-          ignore-unfixed: true # Won't flag if there isn't a fix to the CVE
+          image_type: ${{ matrix.image_type }}
+          format: sarif
+          exit_code: '0'
+          ignore_unfixed: 'true'
           output: 'trivy-results-${{ matrix.image_type }}.sarif'
 
       - name: Upload Trivy SARIF to GitHub Security tab
@@ -78,24 +125,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v7
+      - name: Generate SBOM
+        uses: ./.github/actions/scan-image
         with:
-          name: mautic-${{ matrix.image_type }}
-
-      - name: Load Docker image
-        run: docker load -i image.tar
-
-      - name: Run Trivy
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
-        with:
-          scan-type: 'image'
-          image-ref: 'mautic-${{ matrix.image_type }}'
-          format: 'github'
+          image_type: ${{ matrix.image_type }}
+          format: github
           output: 'dependency-results.sbom.json'
-          github-pat: ${{ secrets.GITHUB_TOKEN }}
+          github_pat: ${{ secrets.GITHUB_TOKEN }}
 
-  build-and-push-image:
+  ###
+  # Publish
+  ###
+  publish-image:
     runs-on: ubuntu-latest
     strategy:
       matrix:

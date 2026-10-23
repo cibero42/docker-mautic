@@ -1,0 +1,59 @@
+name: Scan Docker image
+description: Download a built Mautic image and scan it with Trivy
+
+inputs:
+  image_type:
+    description: Image flavour to scan
+    required: true
+  format:
+    description: Trivy output format
+    required: true
+  scan_type:
+    description: Trivy scan type
+    required: false
+    default: image
+  severity:
+    description: Vulnerability severities to report
+    required: false
+  exit_code:
+    description: Exit code when Trivy finds vulnerabilities
+    required: false
+    default: '0'
+  ignore_unfixed:
+    description: Whether to ignore vulnerabilities without a fix
+    required: false
+    default: 'false'
+  trivyignores:
+    description: Path to a Trivy ignore file
+    required: false
+  output:
+    description: Trivy output file path
+    required: false
+  github_pat:
+    description: GitHub token for GitHub-format output
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Download Docker image artifact
+      uses: actions/download-artifact@v8
+      with:
+        name: mautic-${{ inputs.image_type }}
+
+    - name: Load Docker image
+      shell: bash
+      run: docker load -i image.tar
+
+    - name: Run Trivy
+      uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
+      with:
+        scan-type: ${{ inputs.scan_type }}
+        image-ref: mautic-${{ inputs.image_type }}
+        format: ${{ inputs.format }}
+        severity: ${{ inputs.severity }}
+        exit-code: ${{ inputs.exit_code }}
+        ignore-unfixed: ${{ inputs.ignore_unfixed }}
+        trivyignores: ${{ inputs.trivyignores }}
+        output: ${{ inputs.output }}
+        github-pat: ${{ inputs.github_pat }}
