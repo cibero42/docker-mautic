@@ -74,12 +74,15 @@ jobs:
           path: image
 
       - name: Load Apache test image
-        run: docker load --input image/image.tar
+        run: | 
+          docker load --input image/image.tar
+          docker tag mautic-apache mautic/mautic:latest
+
+      - name: Download Docker Hub Images
+        run: docker compose --project-name mautic-test -f examples/basic/docker-compose.yml pull
 
       - name: Start test image with demo data
-        run: |
-          docker tag mautic-apache mautic/mautic:latest
-          DOCKER_MAUTIC_LOAD_TEST_DATA=true docker compose --project-name mautic-test -f examples/basic/docker-compose.yml up --detach --wait
+        run: DOCKER_MAUTIC_LOAD_TEST_DATA=true docker compose --project-name mautic-test -f examples/basic/docker-compose.yml up --detach --wait
 
       - name: Check login endpoint
         run: |
@@ -88,6 +91,9 @@ jobs:
             echo "Expected /login to return HTTP 200, got $status"
             exit 1
           fi
+      - name: Show logs
+        if: always()
+        run: docker compose --project-name mautic-test -f examples/basic/docker-compose.yml logs
 
       - name: Remove test environment
         if: always()
