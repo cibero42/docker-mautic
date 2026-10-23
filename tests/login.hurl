@@ -19,4 +19,6 @@ header "Set-Cookie" exists
 
 GET http://mautic_web/s/dashboard
 
-HTTP 200
+HTTP 302
+[Asserts]
+header "Location" == "/s/dashboard"
